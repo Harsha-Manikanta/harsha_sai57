@@ -1,0 +1,86 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CGPA from Marksheet</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f8ff;
+      padding: 30px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    label, input, button {
+      display: block;
+      margin: 15px auto;
+      width: 300px;
+      font-size: 16px;
+    }
+    #output {
+      text-align: center;
+      font-size: 22px;
+      color: green;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Upload Your Semester Marksheet</h1>
+
+  <label for="numSems">How many semesters do you want to upload?</label>
+  <input type="number" id="numSems" min="1" max="8" placeholder="e.g. 3" />
+
+  <input type="file" id="files" accept=".pdf,.png,.jpg,.jpeg" multiple />
+
+  <button onclick="processFiles()">Get CGPA</button>
+
+  <div id="output"></div>
+
+  <script>
+    const gradeMap = { S: 10, A: 9, B: 8, C: 7, D: 6, E: 5, F: 0 };
+
+    async function processFiles() {
+      const numSems = parseInt(document.getElementById('numSems').value);
+      const files = document.getElementById('files').files;
+      const output = document.getElementById('output');
+      output.textContent = "Processing...";
+
+      if (!numSems || files.length !== numSems) {
+        output.textContent = "Please enter a valid number and upload exactly that many files.";
+        return;
+      }
+
+      let totalCredits = 0, totalPoints = 0;
+
+      for (let file of files) {
+        const result = await Tesseract.recognize(file, 'eng');
+        const lines = result.data.text.split('\n');
+
+        lines.forEach(line => {
+          const match = line.match(/([SABCDEF])\s+(\d+(\.\d+)?)/);
+          if (match) {
+            const grade = match[1];
+            const credits = parseFloat(match[2]);
+            const points = gradeMap[grade] * credits;
+            totalPoints += points;
+            totalCredits += credits;
+          }
+        });
+      }
+
+      if (totalCredits > 0) {
+        const cgpa = (totalPoints / totalCredits).toFixed(2);
+        output.textContent = `Your CGPA based on ${numSems} semester(s) is: ${cgpa}`;
+      } else {
+        output.textContent = "Could not extract grades/credits. Please check the image/PDF clarity.";
+      }
+    }
+  </script>
+</body>
+</html>
